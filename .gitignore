@@ -1,0 +1,6 @@
+.DS_Store
+.vscode
+assets
+tmp
+venv
+__pycache__

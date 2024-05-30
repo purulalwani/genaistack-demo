@@ -2,7 +2,7 @@ import utils
 import streamlit as st
 from streaming import StreamHandler
 
-from langchain_openai import ChatOpenAI
+from langchain_cohere import ChatCohere
 from langchain.chains import ConversationChain
 from langchain.memory import ConversationBufferMemory
 
@@ -14,12 +14,12 @@ st.write('[![view source code ](https://img.shields.io/badge/view_source_code-gr
 class ContextChatbot:
 
     def __init__(self):
-        self.openai_model = utils.configure_openai()
+        self.openai_model = utils.configure_cohere()
     
     @st.cache_resource
     def setup_chain(_self):
         memory = ConversationBufferMemory()
-        llm = ChatOpenAI(model_name=_self.openai_model, temperature=0, streaming=True)
+        llm = ChatCohere(model_name=_self.openai_model, temperature=0, streaming=False)
         chain = ConversationChain(llm=llm, memory=memory, verbose=True)
         return chain
     
@@ -28,15 +28,17 @@ class ContextChatbot:
         chain = self.setup_chain()
         user_query = st.chat_input(placeholder="Ask me anything!")
         if user_query:
-            utils.display_msg(user_query, 'user')
+            with st.chat_message("user"):
+                utils.display_msg(user_query, 'user')
             with st.chat_message("assistant"):
-                st_cb = StreamHandler(st.empty())
-                result = chain.invoke(
-                    {"input":user_query},
-                    {"callbacks": [st_cb]}
+                # st_cb = StreamHandler(st.empty())
+                result = chain.invoke(user_query
+                    # {"input":user_query},
+                    # {"callbacks": [st_cb]}
                 )
                 response = result["response"]
                 st.session_state.messages.append({"role": "assistant", "content": response})
+                st.write(response)
 
 if __name__ == "__main__":
     obj = ContextChatbot()

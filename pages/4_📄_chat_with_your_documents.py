@@ -3,7 +3,7 @@ import utils
 import streamlit as st
 from streaming import StreamHandler
 
-from langchain_openai import ChatOpenAI
+from langchain_cohere import ChatCohere, CohereEmbeddings
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from langchain_community.document_loaders import PyPDFLoader
@@ -19,7 +19,7 @@ st.write('[![view source code ](https://img.shields.io/badge/view_source_code-gr
 class CustomDataChatbot:
 
     def __init__(self):
-        self.openai_model = utils.configure_openai()
+        self.openai_model = utils.configure_cohere()
 
     def save_file(self, file):
         folder = 'tmp'
@@ -48,7 +48,8 @@ class CustomDataChatbot:
         splits = text_splitter.split_documents(docs)
 
         # Create embeddings and store in vectordb
-        embeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-small-en-v1.5")
+        # embeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-small-en-v1.5")
+        embeddings = CohereEmbeddings(model="embed-english-v3.0")
         vectordb = DocArrayInMemorySearch.from_documents(splits, embeddings)
 
         # Define retriever
@@ -65,7 +66,7 @@ class CustomDataChatbot:
         )
 
         # Setup LLM and QA chain
-        llm = ChatOpenAI(model_name=self.openai_model, temperature=0, streaming=True)
+        llm = ChatCohere(model_name=self.openai_model, temperature=0, streaming=False)
         qa_chain = ConversationalRetrievalChain.from_llm(
             llm=llm,
             retriever=retriever,
@@ -89,7 +90,8 @@ class CustomDataChatbot:
         if uploaded_files and user_query:
             qa_chain = self.setup_qa_chain(uploaded_files)
 
-            utils.display_msg(user_query, 'user')
+            with st.chat_message('user'):
+                utils.display_msg(user_query, 'user')
 
             with st.chat_message("assistant"):
                 st_cb = StreamHandler(st.empty())
@@ -99,7 +101,7 @@ class CustomDataChatbot:
                 )
                 response = result["answer"]
                 st.session_state.messages.append({"role": "assistant", "content": response})
-
+                st.write(response)
                 # to show references
                 for idx, doc in enumerate(result['source_documents'],1):
                     filename = os.path.basename(doc.metadata['source'])
